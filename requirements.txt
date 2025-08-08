@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+redis
+beautifulsoup4
+requests
+python-dotenv

@@ -1,0 +1,50 @@
+version: "3.9"
+services:
+  redis:
+    image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+
+  app:
+    build: .
+    container_name: crawler-api
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      MODEL: ${MODEL}
+      DATA_DIR: /data
+      CRAWL_DEFAULT_SCOPE: ${CRAWL_SCOPE:-in-domain}
+      CRAWL_DEFAULT_DEPTH: ${CRAWL_DEPTH:-3}
+    volumes:
+      - ./data:/data
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  worker:
+    build: .
+    container_name: crawler-worker
+    # Run as a **module** so relative imports would also work, but we use
+    # absolute imports, so either format is fine.
+    command: ["python", "-m", "app.worker"]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      MODEL: ${MODEL}
+      DATA_DIR: /data
+      CRAWL_DEFAULT_SCOPE: ${CRAWL_SCOPE:-in-domain}
+      CRAWL_DEFAULT_DEPTH: ${CRAWL_DEPTH:-3}
+    volumes:
+      - ./data:/data
+    depends_on:
+      - redis
+
+volumes:
+  redis-data:
+    driver: local
